@@ -23,6 +23,7 @@ import com.example.moneymanagerg5.ui.DashboardScreen
 import com.example.moneymanagerg5.ui.NotificationsScreen
 import com.example.moneymanagerg5.ui.ProfileScreen
 import com.example.moneymanagerg5.ui.home.HomeScreen
+import com.example.moneymanagerg5.ui.MoneyManagerG5Theme
 
 sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
     object Home : Screen("home", "Inicio", Icons.Filled.Home)
@@ -34,7 +35,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MainApp()
+            MoneyManagerG5Theme {
+                MainApp()
+            }
         }
     }
 }
