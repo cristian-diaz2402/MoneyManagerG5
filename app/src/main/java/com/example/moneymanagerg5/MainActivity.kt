@@ -24,10 +24,15 @@ import com.example.moneymanagerg5.ui.NotificationsScreen
 import com.example.moneymanagerg5.ui.ProfileScreen
 import com.example.moneymanagerg5.ui.home.HomeScreen
 import com.example.moneymanagerg5.ui.MoneyManagerG5Theme
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.unit.dp
 
-sealed class Screen(val route: String, val label: String, val icon: ImageVector) {
+sealed class Screen(val route: String, val label: String, val icon: Any) {
     object Home : Screen("home", "Inicio", Icons.Filled.Home)
-    object Dashboard : Screen("dashboard", "Estadísticas", Icons.Filled.Star)
+    object Dashboard : Screen("dashboard", "Estadísticas", R.drawable.bar_chart_4_bars_24px)
     object Notifications : Screen("notifications", "Ajustes", Icons.Filled.Settings)
 }
 
@@ -115,7 +120,21 @@ fun BottomNavigationBar(navController: NavHostController) {
         val currentRoute = navBackStackEntry?.destination?.route
         items.forEach { screen ->
             BottomNavigationItem(
-                icon = { Icon(screen.icon, contentDescription = screen.label) },
+                icon = {
+                    Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                        when (screen) {
+                            is Screen.Dashboard -> Icon(
+                                painter = painterResource(id = screen.icon as Int),
+                                contentDescription = screen.label
+                            )
+                            else -> Icon(
+                                imageVector = screen.icon as ImageVector,
+                                contentDescription = screen.label
+                            )
+                        }
+                        Spacer(modifier = androidx.compose.ui.Modifier.height(8.dp))
+                    }
+                },
                 label = { Text(screen.label) },
                 selected = currentRoute == screen.route,
                 onClick = {
