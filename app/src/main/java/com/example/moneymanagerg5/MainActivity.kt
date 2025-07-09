@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.unit.dp
+import com.example.moneymanagerg5.ui.LoginScreen
 
 sealed class Screen(val route: String, val label: String, val icon: Any) {
     object Home : Screen("home", "Inicio", Icons.Filled.Home)
@@ -68,7 +69,7 @@ fun MainApp() {
                     backgroundColor = MaterialTheme.colors.primary,
                     contentColor = MaterialTheme.colors.onPrimary
                 )
-            } else {
+            } else if (currentRoute != "login") {
                 TopAppBar(
                     title = { Text("Money Manager G5") },
                     backgroundColor = MaterialTheme.colors.primary,
@@ -89,7 +90,7 @@ fun MainApp() {
             }
         },
         bottomBar = {
-            if (currentRoute != "profile") {
+            if (currentRoute != "profile" && currentRoute != "login") {
                 BottomNavigationBar(navController)
             }
         }
@@ -97,8 +98,9 @@ fun MainApp() {
         androidx.compose.foundation.layout.Box(modifier = androidx.compose.ui.Modifier.padding(innerPadding)) {
             NavHost(
                 navController = navController,
-                startDestination = Screen.Home.route
+                startDestination = "login"
             ) {
+                composable("login") { LoginScreen(navController = navController) }
                 composable(Screen.Home.route) { HomeScreen() }
                 composable(Screen.Dashboard.route) { DashboardScreen() }
                 composable(Screen.Notifications.route) { NotificationsScreen() }
