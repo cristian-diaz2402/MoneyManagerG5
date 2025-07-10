@@ -2,7 +2,10 @@ package com.example.moneymanagerg5.ui.home
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,25 +28,6 @@ fun HomeScreen() {
     var selectedTabIndex by remember { mutableStateOf(0) }
     val tabTitles = listOf("Comida", "Transporte", "Varios")
 
-    // Datos hardcodeados para cada categoría
-    val gastosComida = listOf(
-        GastoItem("Varios", "40"),
-        GastoItem("Dyspaly", "20"),
-        GastoItem("Baile", "13"),
-        GastoItem("Huevos", "4"),
-        GastoItem("Papas y psn", "2"),
-        GastoItem("Abuelita", "30")
-    )
-    val gastosTransporte = listOf(
-        GastoItem("Bus", "10"),
-        GastoItem("Taxi", "25"),
-        GastoItem("Metro", "8")
-    )
-    val gastosVarios = listOf(
-        GastoItem("Regalo", "50"),
-        GastoItem("Cine", "15")
-    )
-
     Column {
         TabRow(selectedTabIndex = selectedTabIndex) {
             tabTitles.forEachIndexed { index, title ->
@@ -56,21 +40,45 @@ fun HomeScreen() {
         }
         Spacer(modifier = Modifier.height(32.dp))
         when (selectedTabIndex) {
-            0 -> GastoFormWithGrid(nombreCategoria = "Comida", gastos = gastosComida)
-            1 -> GastoFormWithGrid(nombreCategoria = "Transporte", gastos = gastosTransporte)
-            2 -> GastoFormWithGrid(nombreCategoria = "Varios", gastos = gastosVarios)
+            0 -> GastoFormWithGrid(nombreCategoria = "Comida")
+            1 -> GastoFormWithGrid(nombreCategoria = "Transporte")
+            2 -> GastoFormWithGrid(nombreCategoria = "Varios")
         }
     }
 }
 
 @Composable
-fun GastoFormWithGrid(nombreCategoria: String, gastos: List<GastoItem>) {
+fun GastoFormWithGrid(nombreCategoria: String) {
     var valor by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var showSuccessMessage by remember { mutableStateOf(false) }
     var showErrorMessage by remember { mutableStateOf<String?>(null) }
+    var gastos by remember { mutableStateOf(listOf<GastoItem>()) }
     val coroutineScope = rememberCoroutineScope()
+
+    // Cargar gastos al iniciar si la categoría es comida
+    LaunchedEffect(nombreCategoria) {
+        if (nombreCategoria.lowercase() == "comida") {
+            isLoading = true
+            showErrorMessage = null
+            val result = GastoService.obtenerGastosPorCategoria("comida")
+            result.fold(
+                onSuccess = { lista ->
+                    gastos = lista.map {
+                        GastoItem(
+                            descripcion = it.descripcion,
+                            valor = it.monto.toString()
+                        )
+                    }
+                },
+                onFailure = { exception ->
+                    showErrorMessage = "Error al cargar gastos: ${exception.message}"
+                }
+            )
+            isLoading = false
+        }
+    }
 
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Text(
@@ -127,6 +135,11 @@ fun GastoFormWithGrid(nombreCategoria: String, gastos: List<GastoItem>) {
                                     showSuccessMessage = true
                                     valor = ""
                                     descripcion = ""
+                                    // Agregar el nuevo gasto a la lista
+                                    gastos = gastos + GastoItem(
+                                        descripcion = gastoResponse.descripcion,
+                                        valor = gastoResponse.monto.toString()
+                                    )
                                 },
                                 onFailure = { exception ->
                                     Log.e("HomeScreen", "Error al registrar gasto", exception)
@@ -223,32 +236,54 @@ fun GastosComidaGrid(gastos: List<GastoItem>) {
             Spacer(modifier = Modifier.weight(0.5f)) // Para los iconos
         }
         Divider()
-        // Filas de datos
-        gastos.forEach { gasto ->
-            Row(
+        
+        // Lista con scroll usando LazyColumn
+        if (gastos.isEmpty()) {
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .height(200.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = gasto.descripcion,
-                    modifier = Modifier.weight(1f)
+                    text = "No hay gastos registrados",
+                    color = MaterialTheme.colors.onSurface.copy(alpha = 0.6f),
+                    style = MaterialTheme.typography.body2
                 )
-                Text(
-                    text = gasto.valor,
-                    modifier = Modifier.weight(1f)
-                )
-                Row(modifier = Modifier.weight(0.5f)) {
-                    IconButton(onClick = { /* Editar */ }) {
-                        Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar")
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 400.dp) // Altura máxima para evitar que ocupe toda la pantalla
+            ) {
+                items(gastos) { gasto ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = gasto.descripcion,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = gasto.valor,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Row(modifier = Modifier.weight(0.5f)) {
+                            IconButton(onClick = { /* Editar */ }) {
+                                Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar")
+                            }
+                            IconButton(onClick = { /* Eliminar */ }) {
+                                Icon(imageVector = Icons.Default.Delete, contentDescription = "Eliminar")
+                            }
+                        }
                     }
-                    IconButton(onClick = { /* Eliminar */ }) {
-                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Eliminar")
-                    }
+                    Divider()
                 }
             }
-            Divider()
         }
     }
 } 

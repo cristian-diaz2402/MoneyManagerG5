@@ -79,4 +79,39 @@ object GastoService {
             Result.failure(e)
         }
     }
+
+    suspend fun obtenerGastosPorCategoria(
+        categoria: String,
+        limite: Int = 100
+    ): Result<List<GastoResponse>> = withContext(Dispatchers.IO) {
+        try {
+            val accessToken = getAccessToken()
+            if (accessToken == null) {
+                return@withContext Result.failure(Exception("No hay token de autenticación"))
+            }
+            val userId = getUserId()
+            val authorization = "Bearer $accessToken"
+            val response = AuthService.api.obtenerGastosPorCategoria(
+                authorization = authorization,
+                usuarioId = userId,
+                categoria = categoria,
+                limite = limite
+            )
+            if (response.isSuccessful) {
+                val gastos = response.body()
+                if (gastos != null) {
+                    Result.success(gastos)
+                } else {
+                    Result.failure(Exception("Respuesta vacía del servidor"))
+                }
+            } else {
+                val errorBody = response.errorBody()?.string()
+                Log.e("GastoService", "Error al obtener gastos: $errorBody")
+                Result.failure(Exception("Error al obtener gastos: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Log.e("GastoService", "Excepción al obtener gastos", e)
+            Result.failure(e)
+        }
+    }
 } 

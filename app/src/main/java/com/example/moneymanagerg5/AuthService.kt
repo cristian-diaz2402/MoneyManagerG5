@@ -8,6 +8,9 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.http.GET
+import retrofit2.http.Path
+import retrofit2.http.Query
 
 // Data classes para request y response
 
@@ -59,6 +62,14 @@ interface AuthApi {
         @Header("Authorization") authorization: String,
         @Body request: GastoRequest
     ): Response<GastoResponse>
+
+    @GET("/gastos/usuario/{usuario_id}/categoria/{categoria}")
+    suspend fun obtenerGastosPorCategoria(
+        @Header("Authorization") authorization: String,
+        @Path("usuario_id") usuarioId: Int,
+        @Path("categoria") categoria: String,
+        @Query("limite") limite: Int = 100
+    ): Response<List<GastoResponse>>
 }
 
 object AuthService {
