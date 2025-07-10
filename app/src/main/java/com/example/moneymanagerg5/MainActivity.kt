@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.unit.dp
 import com.example.moneymanagerg5.ui.LoginScreen
+import com.example.moneymanagerg5.GastoService
 
 sealed class Screen(val route: String, val label: String, val icon: Any) {
     object Home : Screen("home", "Inicio", Icons.Filled.Home)
@@ -40,6 +41,10 @@ sealed class Screen(val route: String, val label: String, val icon: Any) {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Inicializar GastoService
+        GastoService.initialize(this)
+        
         setContent {
             MoneyManagerG5Theme {
                 MainApp()

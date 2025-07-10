@@ -15,6 +15,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.moneymanagerg5.GastoService
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import android.util.Log
 
 @Composable
 fun HomeScreen() {
@@ -63,6 +67,10 @@ fun HomeScreen() {
 fun GastoFormWithGrid(nombreCategoria: String, gastos: List<GastoItem>) {
     var valor by remember { mutableStateOf("") }
     var descripcion by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+    var showSuccessMessage by remember { mutableStateOf(false) }
+    var showErrorMessage by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Text(
@@ -92,15 +100,103 @@ fun GastoFormWithGrid(nombreCategoria: String, gastos: List<GastoItem>) {
         )
         Spacer(modifier = Modifier.height(16.dp))
         Button(
-            onClick = { /* Sin funcionalidad por ahora */ },
+            onClick = {
+                if (valor.isNotBlank()) {
+                    coroutineScope.launch {
+                        isLoading = true
+                        showErrorMessage = null
+                        showSuccessMessage = false
+                        
+                        try {
+                            val categoria = when (nombreCategoria) {
+                                "Comida" -> "comida"
+                                "Transporte" -> "transporte"
+                                "Varios" -> "varios"
+                                else -> "varios"
+                            }
+                            
+                            val result = GastoService.registrarGasto(
+                                descripcion = descripcion.ifBlank { "Sin descripción" },
+                                monto = valor,
+                                categoria = categoria
+                            )
+                            
+                            result.fold(
+                                onSuccess = { gastoResponse ->
+                                    Log.d("HomeScreen", "Gasto registrado exitosamente: ${gastoResponse.id}")
+                                    showSuccessMessage = true
+                                    valor = ""
+                                    descripcion = ""
+                                },
+                                onFailure = { exception ->
+                                    Log.e("HomeScreen", "Error al registrar gasto", exception)
+                                    showErrorMessage = "Error al registrar gasto: ${exception.message}"
+                                }
+                            )
+                        } catch (e: Exception) {
+                            Log.e("HomeScreen", "Excepción al registrar gasto", e)
+                            showErrorMessage = "Error inesperado: ${e.message}"
+                        } finally {
+                            isLoading = false
+                        }
+                    }
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(48.dp),
-            enabled = true,
+            enabled = valor.isNotBlank() && !isLoading,
             colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.onSurface.copy(alpha = 0.08f))
         ) {
-            Text("GUARDAR", color = MaterialTheme.colors.onSurface)
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = MaterialTheme.colors.onSurface
+                )
+            } else {
+                Text("GUARDAR", color = MaterialTheme.colors.onSurface)
+            }
         }
+        
+        // Mostrar mensajes de éxito o error
+        if (showSuccessMessage) {
+            LaunchedEffect(Unit) {
+                kotlinx.coroutines.delay(3000)
+                showSuccessMessage = false
+            }
+            Card(
+                backgroundColor = MaterialTheme.colors.primary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            ) {
+                Text(
+                    text = "¡Gasto registrado exitosamente!",
+                    color = MaterialTheme.colors.onPrimary,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        }
+        
+        if (showErrorMessage != null) {
+            LaunchedEffect(showErrorMessage) {
+                kotlinx.coroutines.delay(5000)
+                showErrorMessage = null
+            }
+            Card(
+                backgroundColor = MaterialTheme.colors.error,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            ) {
+                Text(
+                    text = showErrorMessage ?: "",
+                    color = MaterialTheme.colors.onError,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        }
+        
         Spacer(modifier = Modifier.height(24.dp))
         GastosComidaGrid(gastos)
     }

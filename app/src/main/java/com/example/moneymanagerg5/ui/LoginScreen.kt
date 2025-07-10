@@ -17,6 +17,7 @@ import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import com.example.moneymanagerg5.AuthService
 import com.example.moneymanagerg5.LoginRequest
+import com.example.moneymanagerg5.GastoService
 import android.util.Log
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Card
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import org.json.JSONObject
 import kotlinx.coroutines.delay
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -38,6 +40,12 @@ fun LoginScreen(
     val coroutineScope = rememberCoroutineScope()
     var loginExitoso by remember { mutableStateOf(false) }
     var errorBannerMessage by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    
+    // Inicializar GastoService
+    LaunchedEffect(Unit) {
+        GastoService.initialize(context)
+    }
 
     if (loginExitoso) {
         LaunchedEffect(Unit) {
@@ -126,6 +134,8 @@ fun LoginScreen(
                                 Log.d("LoginScreen", "Cuerpo de respuesta: $body")
                                 if (body?.access_token != null) {
                                     Log.d("LoginScreen", "Login exitoso, token: ${body.access_token}")
+                                    // Guardar datos de autenticación
+                                    GastoService.saveAuthData(body.access_token, body.user_id ?: 1)
                                     loginExitoso = true
                                 } else {
                                     Log.w("LoginScreen", "Login fallido, detalle: ${body?.detail}")
