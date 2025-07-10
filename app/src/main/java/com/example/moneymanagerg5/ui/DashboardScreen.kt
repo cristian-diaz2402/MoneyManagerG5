@@ -15,24 +15,18 @@ import com.example.moneymanagerg5.ui.home.GastoItem
 
 @Composable
 fun DashboardScreen() {
-    // Datos hardcodeados
-    val presupuesto = 10.0
-    val gastos = listOf(
-        GastoItem("Varios", "40"),
-        GastoItem("Dyspaly", "20"),
-        GastoItem("Baile", "13"),
-        GastoItem("Huevos", "4"),
-        GastoItem("Papas y psn", "2"),
-        GastoItem("Abuelita", "30"),
-        GastoItem("Metro", "0.45"),
-        GastoItem("Metro", "0.45"),
-        GastoItem("Metro", "0.45"),
-        GastoItem("Metro", "0.45"),
-        GastoItem("Metro", "0.45"),
-        GastoItem("Metro", "0.45"),
-        GastoItem("Metro", "0.45")
-    )
-    val totalGastos = gastos.sumOf { it.valor.toDoubleOrNull() ?: 0.0 }
+    // Eliminar datos hardcodeados
+    // val presupuesto = 10.0
+    // val gastos = listOf(
+    //     GastoItem(1, "Varios", "40"),
+    //     ...
+    // )
+    // val totalGastos = gastos.sumOf { it.valor.toDoubleOrNull() ?: 0.0 }
+
+    // Dejar variables listas para datos dinámicos
+    val presupuesto = 0.0
+    val gastos = emptyList<GastoItem>()
+    val totalGastos = 0.0
 
     Column(
         modifier = Modifier

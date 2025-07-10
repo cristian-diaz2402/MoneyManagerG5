@@ -56,28 +56,40 @@ fun GastoFormWithGrid(nombreCategoria: String) {
     var showErrorMessage by remember { mutableStateOf<String?>(null) }
     var gastos by remember { mutableStateOf(listOf<GastoItem>()) }
     val coroutineScope = rememberCoroutineScope()
+    var editandoId by remember { mutableStateOf<Int?>(null) }
 
-    // Cargar gastos al iniciar si la categoría es comida
+    // Cargar gastos al iniciar o al cambiar de categoría
     LaunchedEffect(nombreCategoria) {
-        if (nombreCategoria.lowercase() == "comida") {
-            isLoading = true
-            showErrorMessage = null
-            val result = GastoService.obtenerGastosPorCategoria("comida")
-            result.fold(
-                onSuccess = { lista ->
-                    gastos = lista.map {
-                        GastoItem(
-                            descripcion = it.descripcion,
-                            valor = it.monto.toString()
-                        )
-                    }
-                },
-                onFailure = { exception ->
-                    showErrorMessage = "Error al cargar gastos: ${exception.message}"
-                }
-            )
-            isLoading = false
+        isLoading = true
+        showErrorMessage = null
+        val categoriaApi = when (nombreCategoria.lowercase()) {
+            "comida" -> "comida"
+            "transporte" -> "transporte"
+            "varios" -> "varios"
+            else -> "varios"
         }
+        val result = GastoService.obtenerGastosPorCategoria(categoriaApi)
+        result.fold(
+            onSuccess = { lista ->
+                gastos = lista.map {
+                    GastoItem(
+                        id = it.id,
+                        descripcion = it.descripcion,
+                        valor = it.monto.toString()
+                    )
+                }
+            },
+            onFailure = { exception ->
+                showErrorMessage = "Error al cargar gastos: ${exception.message}"
+            }
+        )
+        isLoading = false
+    }
+
+    fun limpiarFormulario() {
+        valor = ""
+        descripcion = ""
+        editandoId = null
     }
 
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
@@ -114,43 +126,70 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                         isLoading = true
                         showErrorMessage = null
                         showSuccessMessage = false
-                        
-                        try {
-                            val categoria = when (nombreCategoria) {
-                                "Comida" -> "comida"
-                                "Transporte" -> "transporte"
-                                "Varios" -> "varios"
-                                else -> "varios"
+                        val categoriaApi = when (nombreCategoria) {
+                            "Comida" -> "comida"
+                            "Transporte" -> "transporte"
+                            "Varios" -> "varios"
+                            else -> "varios"
+                        }
+                        if (editandoId == null) {
+                            // Registrar nuevo gasto
+                            try {
+                                val result = GastoService.registrarGasto(
+                                    descripcion = descripcion.ifBlank { "Sin descripción" },
+                                    monto = valor,
+                                    categoria = categoriaApi
+                                )
+                                result.fold(
+                                    onSuccess = { gastoResponse ->
+                                        showSuccessMessage = true
+                                        valor = ""
+                                        descripcion = ""
+                                        gastos = gastos + GastoItem(
+                                            id = gastoResponse.id,
+                                            descripcion = gastoResponse.descripcion,
+                                            valor = gastoResponse.monto.toString()
+                                        )
+                                    },
+                                    onFailure = { exception ->
+                                        showErrorMessage = "Error al registrar gasto: ${exception.message}"
+                                    }
+                                )
+                            } catch (e: Exception) {
+                                showErrorMessage = "Error inesperado: ${e.message}"
+                            } finally {
+                                isLoading = false
                             }
-                            
-                            val result = GastoService.registrarGasto(
-                                descripcion = descripcion.ifBlank { "Sin descripción" },
-                                monto = valor,
-                                categoria = categoria
-                            )
-                            
-                            result.fold(
-                                onSuccess = { gastoResponse ->
-                                    Log.d("HomeScreen", "Gasto registrado exitosamente: ${gastoResponse.id}")
-                                    showSuccessMessage = true
-                                    valor = ""
-                                    descripcion = ""
-                                    // Agregar el nuevo gasto a la lista
-                                    gastos = gastos + GastoItem(
-                                        descripcion = gastoResponse.descripcion,
-                                        valor = gastoResponse.monto.toString()
-                                    )
-                                },
-                                onFailure = { exception ->
-                                    Log.e("HomeScreen", "Error al registrar gasto", exception)
-                                    showErrorMessage = "Error al registrar gasto: ${exception.message}"
-                                }
-                            )
-                        } catch (e: Exception) {
-                            Log.e("HomeScreen", "Excepción al registrar gasto", e)
-                            showErrorMessage = "Error inesperado: ${e.message}"
-                        } finally {
-                            isLoading = false
+                        } else {
+                            // Editar gasto existente
+                            try {
+                                val result = GastoService.editarGasto(
+                                    gastoId = editandoId!!,
+                                    descripcion = descripcion.ifBlank { "Sin descripción" },
+                                    monto = valor,
+                                    categoria = categoriaApi
+                                )
+                                result.fold(
+                                    onSuccess = { gastoResponse ->
+                                        showSuccessMessage = true
+                                        // Actualizar el gasto en la lista
+                                        gastos = gastos.map {
+                                            if (it.id == gastoResponse.id) it.copy(
+                                                descripcion = gastoResponse.descripcion,
+                                                valor = gastoResponse.monto.toString()
+                                            ) else it
+                                        }
+                                        limpiarFormulario()
+                                    },
+                                    onFailure = { exception ->
+                                        showErrorMessage = "Error al actualizar gasto: ${exception.message}"
+                                    }
+                                )
+                            } catch (e: Exception) {
+                                showErrorMessage = "Error inesperado: ${e.message}"
+                            } finally {
+                                isLoading = false
+                            }
                         }
                     }
                 }
@@ -167,10 +206,9 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                     color = MaterialTheme.colors.onSurface
                 )
             } else {
-                Text("GUARDAR", color = MaterialTheme.colors.onSurface)
+                Text(if (editandoId == null) "GUARDAR" else "ACTUALIZAR", color = MaterialTheme.colors.onSurface)
             }
         }
-        
         // Mostrar mensajes de éxito o error
         if (showSuccessMessage) {
             LaunchedEffect(Unit) {
@@ -184,13 +222,12 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                     .padding(vertical = 8.dp)
             ) {
                 Text(
-                    text = "¡Gasto registrado exitosamente!",
+                    text = "¡Operación exitosa!",
                     color = MaterialTheme.colors.onPrimary,
                     modifier = Modifier.padding(16.dp)
                 )
             }
         }
-        
         if (showErrorMessage != null) {
             LaunchedEffect(showErrorMessage) {
                 kotlinx.coroutines.delay(5000)
@@ -209,17 +246,40 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                 )
             }
         }
-        
         Spacer(modifier = Modifier.height(24.dp))
-        GastosComidaGrid(gastos)
+        GastosComidaGrid(
+            gastos,
+            onEditar = { gasto ->
+                valor = gasto.valor
+                descripcion = gasto.descripcion
+                editandoId = gasto.id
+            },
+            onEliminar = { gasto ->
+                coroutineScope.launch {
+                    isLoading = true
+                    showErrorMessage = null
+                    val result = GastoService.eliminarGasto(gasto.id)
+                    result.fold(
+                        onSuccess = { _ ->
+                            showSuccessMessage = true
+                            gastos = gastos.filter { it.id != gasto.id }
+                        },
+                        onFailure = { exception ->
+                            showErrorMessage = "Error al eliminar gasto: ${exception.message}"
+                        }
+                    )
+                    isLoading = false
+                }
+            }
+        )
     }
 }
 
 // Modelo de dato para la tabla
-data class GastoItem(val descripcion: String, val valor: String)
+data class GastoItem(val id: Int, val descripcion: String, val valor: String)
 
 @Composable
-fun GastosComidaGrid(gastos: List<GastoItem>) {
+fun GastosComidaGrid(gastos: List<GastoItem>, onEditar: (GastoItem) -> Unit, onEliminar: (GastoItem) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
         // Encabezados
         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
@@ -273,10 +333,10 @@ fun GastosComidaGrid(gastos: List<GastoItem>) {
                             modifier = Modifier.weight(1f)
                         )
                         Row(modifier = Modifier.weight(0.5f)) {
-                            IconButton(onClick = { /* Editar */ }) {
+                            IconButton(onClick = { onEditar(gasto) }) {
                                 Icon(imageVector = Icons.Default.Edit, contentDescription = "Editar")
                             }
-                            IconButton(onClick = { /* Eliminar */ }) {
+                            IconButton(onClick = { onEliminar(gasto) }) {
                                 Icon(imageVector = Icons.Default.Delete, contentDescription = "Eliminar")
                             }
                         }

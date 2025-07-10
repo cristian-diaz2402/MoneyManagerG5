@@ -12,9 +12,7 @@ import com.example.moneymanagerg5.ui.home.GastoItem
 
 @Composable
 fun NotificationsScreen() {
-    val gastosTransporte = listOf(
-        GastoItem("Metro", "0.45")
-    )
+    val gastosTransporte = emptyList<GastoItem>()
 
     GastoFormWithGridAjustes(
         nombreCategoria = "Transporte predefinido",
@@ -72,6 +70,10 @@ fun GastoFormWithGridAjustes(nombreCategoria: String, subtitulo: String, gastos:
             Text("GUARDAR", color = MaterialTheme.colors.onSurface)
         }
         Spacer(modifier = Modifier.height(24.dp))
-        com.example.moneymanagerg5.ui.home.GastosComidaGrid(gastos)
+        com.example.moneymanagerg5.ui.home.GastosComidaGrid(
+            gastos = gastos,
+            onEditar = {},
+            onEliminar = {}
+        )
     }
 } 

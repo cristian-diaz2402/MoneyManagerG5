@@ -114,4 +114,80 @@ object GastoService {
             Result.failure(e)
         }
     }
+
+    suspend fun editarGasto(
+        gastoId: Int,
+        descripcion: String,
+        monto: String,
+        categoria: String
+    ): Result<GastoResponse> = withContext(Dispatchers.IO) {
+        try {
+            val accessToken = getAccessToken()
+            if (accessToken == null) {
+                return@withContext Result.failure(Exception("No hay token de autenticación"))
+            }
+            val userId = getUserId()
+            val authorization = "Bearer $accessToken"
+            val request = GastoRequest(
+                descripcion = descripcion,
+                monto = monto,
+                categoria = categoria,
+                usuario_id = userId.toString()
+            )
+            val response = AuthService.api.editarGasto(
+                authorization = authorization,
+                gastoId = gastoId,
+                usuarioId = userId,
+                request = request
+            )
+            if (response.isSuccessful) {
+                val gastoResponse = response.body()
+                if (gastoResponse != null) {
+                    Result.success(gastoResponse)
+                } else {
+                    Result.failure(Exception("Respuesta vacía del servidor"))
+                }
+            } else {
+                val errorBody = response.errorBody()?.string()
+                Log.e("GastoService", "Error al editar gasto: $errorBody")
+                Result.failure(Exception("Error al editar gasto: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Log.e("GastoService", "Excepción al editar gasto", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun eliminarGasto(
+        gastoId: Int
+    ): Result<EliminarGastoResponse> = withContext(Dispatchers.IO) {
+        try {
+            val accessToken = getAccessToken()
+            if (accessToken == null) {
+                return@withContext Result.failure(Exception("No hay token de autenticación"))
+            }
+            val userId = getUserId()
+            val authorization = "Bearer $accessToken"
+            val response = AuthService.api.eliminarGasto(
+                authorization = authorization,
+                gastoId = gastoId,
+                usuarioId = userId
+            )
+            if (response.isSuccessful) {
+                val eliminarResponse = response.body()
+                if (eliminarResponse != null) {
+                    Result.success(eliminarResponse)
+                } else {
+                    Result.failure(Exception("Respuesta vacía del servidor"))
+                }
+            } else {
+                val errorBody = response.errorBody()?.string()
+                Log.e("GastoService", "Error al eliminar gasto: $errorBody")
+                Result.failure(Exception("Error al eliminar gasto: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Log.e("GastoService", "Excepción al eliminar gasto", e)
+            Result.failure(e)
+        }
+    }
 } 

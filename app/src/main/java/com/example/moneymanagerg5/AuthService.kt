@@ -11,6 +11,8 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.PUT
+import retrofit2.http.DELETE
 
 // Data classes para request y response
 
@@ -53,6 +55,20 @@ data class GastoResponse(
     val updated_at: String
 )
 
+// Data class para la respuesta de eliminación
+data class EliminarGastoResponse(
+    val mensaje: String?,
+    val gasto_eliminado: GastoEliminado?,
+    val usuario_id: Int?
+)
+data class GastoEliminado(
+    val id: Int,
+    val descripcion: String,
+    val monto: Double,
+    val categoria: String,
+    val fecha: String
+)
+
 interface AuthApi {
     @POST("/auth/login-json")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
@@ -70,6 +86,21 @@ interface AuthApi {
         @Path("categoria") categoria: String,
         @Query("limite") limite: Int = 100
     ): Response<List<GastoResponse>>
+
+    @PUT("/gastos/{gasto_id}")
+    suspend fun editarGasto(
+        @Header("Authorization") authorization: String,
+        @Path("gasto_id") gastoId: Int,
+        @Query("usuario_id") usuarioId: Int,
+        @Body request: GastoRequest
+    ): Response<GastoResponse>
+
+    @DELETE("/gastos/{gasto_id}")
+    suspend fun eliminarGasto(
+        @Header("Authorization") authorization: String,
+        @Path("gasto_id") gastoId: Int,
+        @Query("usuario_id") usuarioId: Int
+    ): Response<EliminarGastoResponse>
 }
 
 object AuthService {
