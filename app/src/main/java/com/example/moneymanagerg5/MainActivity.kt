@@ -25,10 +25,14 @@ import com.example.moneymanagerg5.ui.ProfileScreen
 import com.example.moneymanagerg5.ui.home.HomeScreen
 import com.example.moneymanagerg5.ui.MoneyManagerG5Theme
 import androidx.compose.ui.res.painterResource
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.moneymanagerg5.ui.LoginScreen
 import com.example.moneymanagerg5.GastoService
 
@@ -122,24 +126,49 @@ fun BottomNavigationBar(navController: NavHostController) {
         Screen.Dashboard,
         Screen.Notifications
     )
+    
+    val notifications by NotificationService.notifications.collectAsState()
+    val unreadCount = notifications.count { !it.leida }
+    
     BottomNavigation {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
         items.forEach { screen ->
             BottomNavigationItem(
                 icon = {
-                    Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                        when (screen) {
-                            is Screen.Dashboard -> Icon(
-                                painter = painterResource(id = screen.icon as Int),
-                                contentDescription = screen.label
-                            )
-                            else -> Icon(
-                                imageVector = screen.icon as ImageVector,
-                                contentDescription = screen.label
-                            )
+                    Box {
+                        Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                            when (screen) {
+                                is Screen.Dashboard -> Icon(
+                                    painter = painterResource(id = screen.icon as Int),
+                                    contentDescription = screen.label
+                                )
+                                else -> Icon(
+                                    imageVector = screen.icon as ImageVector,
+                                    contentDescription = screen.label
+                                )
+                            }
+                            Spacer(modifier = androidx.compose.ui.Modifier.height(8.dp))
                         }
-                        Spacer(modifier = androidx.compose.ui.Modifier.height(8.dp))
+                        
+                        // Badge de notificaciones no leídas solo para la pestaña de Ajustes/Notificaciones
+                        if (screen is Screen.Notifications && unreadCount > 0) {
+                            Box(
+                                modifier = androidx.compose.ui.Modifier
+                                    .offset(x = 12.dp, y = (-4).dp)
+                                    .size(16.dp)
+                                    .clip(CircleShape)
+                                    .background(androidx.compose.ui.graphics.Color.Red),
+                                contentAlignment = androidx.compose.ui.Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (unreadCount > 9) "9+" else unreadCount.toString(),
+                                    color = androidx.compose.ui.graphics.Color.White,
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                 },
                 label = { Text(screen.label) },

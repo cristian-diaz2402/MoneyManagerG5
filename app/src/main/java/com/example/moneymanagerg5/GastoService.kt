@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.google.gson.Gson
 
 object GastoService {
     private const val PREFS_NAME = "MoneyManagerPrefs"
@@ -12,9 +13,11 @@ object GastoService {
     private const val KEY_USER_ID = "user_id"
     
     private lateinit var prefs: SharedPreferences
+    private val gson = Gson()
     
     fun initialize(context: Context) {
         prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        NotificationService.initialize(context)
     }
     
     fun saveAuthData(accessToken: String, userId: Int) {
@@ -39,6 +42,130 @@ object GastoService {
             .apply()
     }
     
+    suspend fun verificarCategoria(
+        descripcion: String,
+        categoriaUsuario: String
+    ): Result<VerificarCategoriaResponse> = withContext(Dispatchers.IO) {
+        try {
+            val accessToken = getAccessToken()
+            if (accessToken == null) {
+                return@withContext Result.failure(Exception("No hay token de autenticación"))
+            }
+            val request = VerificarCategoriaRequest(
+                descripcion = descripcion,
+                categoria_usuario = categoriaUsuario
+            )
+            val authorization = "Bearer $accessToken"
+            val response = AuthService.api.verificarCategoria(authorization, request)
+            if (response.isSuccessful) {
+                val verificarResponse = response.body()
+                if (verificarResponse != null) {
+                    Log.d("GastoService", "Categoría verificada exitosamente")
+                    
+                    // Crear notificación con la respuesta completa
+                    val respuestaCompleta = gson.toJson(verificarResponse)
+                    val mensaje = if (verificarResponse.recomendacion.coincide) {
+                        "✅ ${verificarResponse.recomendacion.mensaje}"
+                    } else {
+                        "💡 ${verificarResponse.recomendacion.mensaje}"
+                    }
+                    
+                    NotificationService.addNotification(
+                        tipo = TipoNotificacion.VERIFICACION_CATEGORIA,
+                        titulo = "Verificación ML - ${verificarResponse.recomendacion.categoria_original}",
+                        mensaje = mensaje,
+                        respuestaCompleta = respuestaCompleta
+                    )
+                    
+                    Result.success(verificarResponse)
+                } else {
+                    Result.failure(Exception("Respuesta vacía del servidor"))
+                }
+            } else {
+                val errorBody = response.errorBody()?.string()
+                Log.e("GastoService", "Error al verificar categoría: $errorBody")
+                
+                // Notificación de error
+                NotificationService.addNotification(
+                    tipo = TipoNotificacion.ERROR,
+                    titulo = "Error en Verificación ML",
+                    mensaje = "Error ${response.code()}: ${response.message()}",
+                    respuestaCompleta = errorBody ?: "Error sin detalles"
+                )
+                
+                Result.failure(Exception("Error al verificar categoría: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Log.e("GastoService", "Excepción al verificar categoría", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun crearGastoConDecision(
+        descripcion: String,
+        monto: Double,
+        categoriaOriginal: String,
+        categoriaSugerida: String,
+        aceptaSugerencia: Boolean
+    ): Result<GastoConDecisionResponse> = withContext(Dispatchers.IO) {
+        try {
+            val accessToken = getAccessToken()
+            if (accessToken == null) {
+                return@withContext Result.failure(Exception("No hay token de autenticación"))
+            }
+            
+            val request = CrearGastoConDecisionRequest(
+                descripcion = descripcion,
+                monto = monto,
+                categoria_original = categoriaOriginal,
+                categoria_sugerida = categoriaSugerida,
+                acepta_sugerencia = aceptaSugerencia
+            )
+            
+            val authorization = "Bearer $accessToken"
+            val response = AuthService.api.crearGastoConDecision(authorization, request)
+            
+            if (response.isSuccessful) {
+                val gastoResponse = response.body()
+                if (gastoResponse != null) {
+                    Log.d("GastoService", "Gasto creado con decisión exitosamente: ${gastoResponse.id}")
+                    
+                    // Crear notificación con la respuesta completa
+                    val respuestaCompleta = gson.toJson(gastoResponse)
+                    val decision = if (aceptaSugerencia) "Aceptó" else "Rechazó"
+                    val mensaje = "$decision sugerencia ML: ${gastoResponse.categoria} - $${gastoResponse.monto}"
+                    
+                    NotificationService.addNotification(
+                        tipo = TipoNotificacion.CREACION_GASTO,
+                        titulo = "Gasto Creado con ML #${gastoResponse.id}",
+                        mensaje = mensaje,
+                        respuestaCompleta = respuestaCompleta
+                    )
+                    
+                    Result.success(gastoResponse)
+                } else {
+                    Result.failure(Exception("Respuesta vacía del servidor"))
+                }
+            } else {
+                val errorBody = response.errorBody()?.string()
+                Log.e("GastoService", "Error al crear gasto con decisión: $errorBody")
+                
+                // Notificación de error
+                NotificationService.addNotification(
+                    tipo = TipoNotificacion.ERROR,
+                    titulo = "Error al Crear Gasto",
+                    mensaje = "Error ${response.code()}: ${response.message()}",
+                    respuestaCompleta = errorBody ?: "Error sin detalles"
+                )
+                
+                Result.failure(Exception("Error al crear gasto con decisión: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Log.e("GastoService", "Excepción al crear gasto con decisión", e)
+            Result.failure(e)
+        }
+    }
+
     suspend fun registrarGasto(
         descripcion: String,
         monto: String,
@@ -65,6 +192,18 @@ object GastoService {
                 val gastoResponse = response.body()
                 if (gastoResponse != null) {
                     Log.d("GastoService", "Gasto registrado exitosamente: ${gastoResponse.id}")
+                    
+                    // Crear notificación con la respuesta completa
+                    val respuestaCompleta = gson.toJson(gastoResponse)
+                    val mensaje = "Gasto registrado: ${gastoResponse.descripcion} - $${gastoResponse.monto}"
+                    
+                    NotificationService.addNotification(
+                        tipo = TipoNotificacion.GASTO_NORMAL,
+                        titulo = "Gasto Registrado #${gastoResponse.id}",
+                        mensaje = mensaje,
+                        respuestaCompleta = respuestaCompleta
+                    )
+                    
                     Result.success(gastoResponse)
                 } else {
                     Result.failure(Exception("Respuesta vacía del servidor"))
@@ -72,6 +211,15 @@ object GastoService {
             } else {
                 val errorBody = response.errorBody()?.string()
                 Log.e("GastoService", "Error al registrar gasto: $errorBody")
+                
+                // Notificación de error
+                NotificationService.addNotification(
+                    tipo = TipoNotificacion.ERROR,
+                    titulo = "Error al Registrar Gasto",
+                    mensaje = "Error ${response.code()}: ${response.message()}",
+                    respuestaCompleta = errorBody ?: "Error sin detalles"
+                )
+                
                 Result.failure(Exception("Error al registrar gasto: ${response.code()}"))
             }
         } catch (e: Exception) {
@@ -143,6 +291,17 @@ object GastoService {
             if (response.isSuccessful) {
                 val gastoResponse = response.body()
                 if (gastoResponse != null) {
+                    // Crear notificación con la respuesta completa
+                    val respuestaCompleta = gson.toJson(gastoResponse)
+                    val mensaje = "Gasto editado: ${gastoResponse.descripcion} - $${gastoResponse.monto}"
+                    
+                    NotificationService.addNotification(
+                        tipo = TipoNotificacion.EDITAR_GASTO,
+                        titulo = "Gasto Editado #${gastoResponse.id}",
+                        mensaje = mensaje,
+                        respuestaCompleta = respuestaCompleta
+                    )
+                    
                     Result.success(gastoResponse)
                 } else {
                     Result.failure(Exception("Respuesta vacía del servidor"))
@@ -150,6 +309,15 @@ object GastoService {
             } else {
                 val errorBody = response.errorBody()?.string()
                 Log.e("GastoService", "Error al editar gasto: $errorBody")
+                
+                // Notificación de error
+                NotificationService.addNotification(
+                    tipo = TipoNotificacion.ERROR,
+                    titulo = "Error al Editar Gasto",
+                    mensaje = "Error ${response.code()}: ${response.message()}",
+                    respuestaCompleta = errorBody ?: "Error sin detalles"
+                )
+                
                 Result.failure(Exception("Error al editar gasto: ${response.code()}"))
             }
         } catch (e: Exception) {
@@ -176,6 +344,22 @@ object GastoService {
             if (response.isSuccessful) {
                 val eliminarResponse = response.body()
                 if (eliminarResponse != null) {
+                    // Crear notificación con la respuesta completa
+                    val respuestaCompleta = gson.toJson(eliminarResponse)
+                    val gastoInfo = eliminarResponse.gasto_eliminado
+                    val mensaje = if (gastoInfo != null) {
+                        "Gasto eliminado: ${gastoInfo.descripcion} - $${gastoInfo.monto}"
+                    } else {
+                        eliminarResponse.mensaje ?: "Gasto eliminado exitosamente"
+                    }
+                    
+                    NotificationService.addNotification(
+                        tipo = TipoNotificacion.ELIMINAR_GASTO,
+                        titulo = "Gasto Eliminado",
+                        mensaje = mensaje,
+                        respuestaCompleta = respuestaCompleta
+                    )
+                    
                     Result.success(eliminarResponse)
                 } else {
                     Result.failure(Exception("Respuesta vacía del servidor"))
@@ -183,6 +367,15 @@ object GastoService {
             } else {
                 val errorBody = response.errorBody()?.string()
                 Log.e("GastoService", "Error al eliminar gasto: $errorBody")
+                
+                // Notificación de error
+                NotificationService.addNotification(
+                    tipo = TipoNotificacion.ERROR,
+                    titulo = "Error al Eliminar Gasto",
+                    mensaje = "Error ${response.code()}: ${response.message()}",
+                    respuestaCompleta = errorBody ?: "Error sin detalles"
+                )
+                
                 Result.failure(Exception("Error al eliminar gasto: ${response.code()}"))
             }
         } catch (e: Exception) {

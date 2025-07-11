@@ -19,6 +19,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.moneymanagerg5.GastoService
+import com.example.moneymanagerg5.VerificarCategoriaResponse
+import com.example.moneymanagerg5.ui.components.CategoriaModal
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import android.util.Log
@@ -57,6 +59,11 @@ fun GastoFormWithGrid(nombreCategoria: String) {
     var gastos by remember { mutableStateOf(listOf<GastoItem>()) }
     val coroutineScope = rememberCoroutineScope()
     var editandoId by remember { mutableStateOf<Int?>(null) }
+    
+    // Variables para el modal de categoría
+    var showCategoriaModal by remember { mutableStateOf(false) }
+    var verificarCategoriaResponse by remember { mutableStateOf<VerificarCategoriaResponse?>(null) }
+    var gastoPendiente by remember { mutableStateOf<Triple<String, String, String>?>(null) } // descripcion, monto, categoria
 
     // Cargar gastos al iniciar o al cambiar de categoría
     LaunchedEffect(nombreCategoria) {
@@ -74,7 +81,7 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                 gastos = lista.map {
                     GastoItem(
                         id = it.id,
-                        descripcion = it.descripcion,
+                        descripcion = it.descripcion ?: "Sin descripción",
                         valor = it.monto.toString()
                     )
                 }
@@ -90,6 +97,79 @@ fun GastoFormWithGrid(nombreCategoria: String) {
         valor = ""
         descripcion = ""
         editandoId = null
+    }
+    
+    // Función para registrar gasto directamente (sin verificación ML)
+    val registrarGastoDirecto: suspend (String, String, String) -> Unit = { descripcion, monto, categoria ->
+        try {
+            val result = GastoService.registrarGasto(
+                descripcion = descripcion,
+                monto = monto,
+                categoria = categoria
+            )
+            result.fold(
+                onSuccess = { gastoResponse ->
+                    showSuccessMessage = true
+                    limpiarFormulario()
+                    gastos = gastos + GastoItem(
+                        id = gastoResponse.id,
+                        descripcion = gastoResponse.descripcion ?: "Sin descripción",
+                        valor = gastoResponse.monto.toString()
+                    )
+                },
+                onFailure = { exception ->
+                    showErrorMessage = "Error al registrar gasto: ${exception.message}"
+                }
+            )
+        } catch (e: Exception) {
+            showErrorMessage = "Error inesperado: ${e.message}"
+        } finally {
+            isLoading = false
+        }
+    }
+    
+    // Función para manejar la decisión del modal
+    val manejarDecisionModal: suspend (Boolean) -> Unit = { aceptaSugerencia ->
+        val triple = gastoPendiente
+        if (triple == null) {
+            isLoading = false
+            showCategoriaModal = false
+            verificarCategoriaResponse = null
+        } else {
+            val (descripcionPend, montoPend, categoriaOriginalPend) = triple
+            try {
+                val montoDouble = montoPend.toDoubleOrNull() ?: 0.0
+                val categoriaSugerida = verificarCategoriaResponse?.recomendacion?.categoria_sugerida ?: categoriaOriginalPend
+                val result = GastoService.crearGastoConDecision(
+                    descripcion = descripcionPend,
+                    monto = montoDouble,
+                    categoriaOriginal = categoriaOriginalPend,
+                    categoriaSugerida = categoriaSugerida,
+                    aceptaSugerencia = aceptaSugerencia
+                )
+                result.fold(
+                    onSuccess = { gastoResponse ->
+                        showSuccessMessage = true
+                        limpiarFormulario()
+                        gastos = gastos + GastoItem(
+                            id = gastoResponse.id,
+                            descripcion = gastoResponse.descripcion ?: "Sin descripción",
+                            valor = gastoResponse.monto.toString()
+                        )
+                    },
+                    onFailure = { exception ->
+                        showErrorMessage = "Error al registrar gasto: ${exception.message}"
+                    }
+                )
+            } catch (e: Exception) {
+                showErrorMessage = "Error inesperado: ${e.message}"
+            } finally {
+                isLoading = false
+                showCategoriaModal = false
+                verificarCategoriaResponse = null
+                gastoPendiente = null
+            }
+        }
     }
 
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
@@ -132,36 +212,43 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                             "Varios" -> "varios"
                             else -> "varios"
                         }
+                        
                         if (editandoId == null) {
-                            // Registrar nuevo gasto
+                            // Nuevo flujo: verificar categoría primero
                             try {
-                                val result = GastoService.registrarGasto(
-                                    descripcion = descripcion.ifBlank { "Sin descripción" },
-                                    monto = valor,
-                                    categoria = categoriaApi
+                                val descripcionFinal = descripcion.ifBlank { "Sin descripción" }
+                                
+                                // Verificar categoría con ML
+                                val verificarResult = GastoService.verificarCategoria(
+                                    descripcion = descripcionFinal,
+                                    categoriaUsuario = categoriaApi
                                 )
-                                result.fold(
-                                    onSuccess = { gastoResponse ->
-                                        showSuccessMessage = true
-                                        valor = ""
-                                        descripcion = ""
-                                        gastos = gastos + GastoItem(
-                                            id = gastoResponse.id,
-                                            descripcion = gastoResponse.descripcion,
-                                            valor = gastoResponse.monto.toString()
-                                        )
+                                
+                                verificarResult.fold(
+                                    onSuccess = { verificarResponse ->
+                                        if (verificarResponse.recomendacion.coincide) {
+                                            // Si coincide, registrar directamente
+                                            registrarGastoDirecto(descripcionFinal, valor, categoriaApi)
+                                        } else {
+                                            // Si no coincide, mostrar modal
+                                            verificarCategoriaResponse = verificarResponse
+                                            gastoPendiente = Triple(descripcionFinal, valor, categoriaApi)
+                                            showCategoriaModal = true
+                                            isLoading = false
+                                        }
                                     },
                                     onFailure = { exception ->
-                                        showErrorMessage = "Error al registrar gasto: ${exception.message}"
+                                        // Si falla la verificación, registrar directamente
+                                        Log.w("HomeScreen", "Error al verificar categoría: ${exception.message}")
+                                        registrarGastoDirecto(descripcionFinal, valor, categoriaApi)
                                     }
                                 )
                             } catch (e: Exception) {
                                 showErrorMessage = "Error inesperado: ${e.message}"
-                            } finally {
                                 isLoading = false
                             }
                         } else {
-                            // Editar gasto existente
+                            // Editar gasto existente (sin verificación ML)
                             try {
                                 val result = GastoService.editarGasto(
                                     gastoId = editandoId!!,
@@ -175,7 +262,7 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                                         // Actualizar el gasto en la lista
                                         gastos = gastos.map {
                                             if (it.id == gastoResponse.id) it.copy(
-                                                descripcion = gastoResponse.descripcion,
+                                                descripcion = gastoResponse.descripcion ?: "Sin descripción",
                                                 valor = gastoResponse.monto.toString()
                                             ) else it
                                         }
@@ -272,6 +359,30 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                 }
             }
         )
+
+        // Modal de confirmación de categoría
+        if (showCategoriaModal && verificarCategoriaResponse != null) {
+            CategoriaModal(
+                recomendacion = verificarCategoriaResponse!!.recomendacion,
+                categoriaOriginal = verificarCategoriaResponse!!.recomendacion.categoria_original,
+                onAceptar = {
+                    coroutineScope.launch {
+                        manejarDecisionModal(true)
+                    }
+                },
+                onIgnorar = {
+                    coroutineScope.launch {
+                        manejarDecisionModal(false)
+                    }
+                },
+                onDismiss = {
+                    showCategoriaModal = false
+                    verificarCategoriaResponse = null
+                    gastoPendiente = null
+                    isLoading = false
+                }
+            )
+        }
     }
 }
 

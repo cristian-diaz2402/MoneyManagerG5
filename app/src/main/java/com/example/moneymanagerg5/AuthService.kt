@@ -38,7 +38,7 @@ data class GastoRequest(
 )
 
 data class GastoResponse(
-    val descripcion: String,
+    val descripcion: String?,
     val monto: Double,
     val categoria: String,
     val id: Int,
@@ -67,6 +67,41 @@ data class GastoEliminado(
     val monto: Double,
     val categoria: String,
     val fecha: String
+)
+
+// Data classes para verificación de categoría con ML
+data class VerificarCategoriaRequest(
+    val descripcion: String,
+    val categoria_usuario: String
+)
+
+data class RecomendacionML(
+    val categoria_sugerida: String,
+    val categoria_original: String,
+    val coincide: Boolean,
+    val mensaje: String
+)
+
+data class VerificarCategoriaResponse(
+    val recomendacion: RecomendacionML
+)
+
+// Data class para crear gasto con decisión
+data class CrearGastoConDecisionRequest(
+    val descripcion: String,
+    val monto: Double,
+    val categoria_original: String,
+    val categoria_sugerida: String,
+    val acepta_sugerencia: Boolean
+)
+
+data class GastoConDecisionResponse(
+    val id: Int,
+    val descripcion: String?,
+    val monto: Double,
+    val categoria: String,
+    val fecha: String,
+    val usuario_id: Int
 )
 
 interface AuthApi {
@@ -101,6 +136,18 @@ interface AuthApi {
         @Path("gasto_id") gastoId: Int,
         @Query("usuario_id") usuarioId: Int
     ): Response<EliminarGastoResponse>
+
+    @POST("/ml/verificar-categoria")
+    suspend fun verificarCategoria(
+        @Header("Authorization") authorization: String,
+        @Body request: VerificarCategoriaRequest
+    ): Response<VerificarCategoriaResponse>
+
+    @POST("/gastos/crear-con-decision")
+    suspend fun crearGastoConDecision(
+        @Header("Authorization") authorization: String,
+        @Body request: CrearGastoConDecisionRequest
+    ): Response<GastoConDecisionResponse>
 }
 
 object AuthService {
