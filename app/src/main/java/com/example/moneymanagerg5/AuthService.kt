@@ -92,7 +92,8 @@ data class CrearGastoConDecisionRequest(
     val monto: Double,
     val categoria_original: String,
     val categoria_sugerida: String,
-    val acepta_sugerencia: Boolean
+    val acepta_sugerencia: Boolean,
+    val usuario_id: Int
 )
 
 data class GastoConDecisionResponse(

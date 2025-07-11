@@ -119,7 +119,8 @@ object GastoService {
                 monto = monto,
                 categoria_original = categoriaOriginal,
                 categoria_sugerida = categoriaSugerida,
-                acepta_sugerencia = aceptaSugerencia
+                acepta_sugerencia = aceptaSugerencia,
+                usuario_id = 1 // TODO: Obtener del almacenamiento de sesión cuando esté implementado
             )
             
             val authorization = "Bearer $accessToken"
