@@ -99,13 +99,16 @@ fun GastoFormWithGrid(nombreCategoria: String) {
         editandoId = null
     }
     
-    // Función para registrar gasto directamente (sin verificación ML)
-    val registrarGastoDirecto: suspend (String, String, String) -> Unit = { descripcion, monto, categoria ->
+    // Función para crear gasto con decisión de ML
+    val crearGastoConDecisionML: suspend (String, String, String, String, Boolean) -> Unit = { descripcion, monto, categoriaOriginal, categoriaSugerida, aceptaSugerencia ->
         try {
-            val result = GastoService.registrarGasto(
+            val montoDouble = monto.toDoubleOrNull() ?: 0.0
+            val result = GastoService.crearGastoConDecision(
                 descripcion = descripcion,
-                monto = monto,
-                categoria = categoria
+                monto = montoDouble,
+                categoriaOriginal = categoriaOriginal,
+                categoriaSugerida = categoriaSugerida,
+                aceptaSugerencia = aceptaSugerencia
             )
             result.fold(
                 onSuccess = { gastoResponse ->
@@ -118,7 +121,7 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                     )
                 },
                 onFailure = { exception ->
-                    showErrorMessage = "Error al registrar gasto: ${exception.message}"
+                    showErrorMessage = "Error al crear gasto: ${exception.message}"
                 }
             )
         } catch (e: Exception) {
@@ -214,7 +217,7 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                         }
                         
                         if (editandoId == null) {
-                            // Nuevo flujo: verificar categoría primero
+                            // Flujo para crear nuevo gasto con ML
                             try {
                                 val descripcionFinal = descripcion.ifBlank { "Sin descripción" }
                                 
@@ -227,8 +230,14 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                                 verificarResult.fold(
                                     onSuccess = { verificarResponse ->
                                         if (verificarResponse.recomendacion.coincide) {
-                                            // Si coincide, registrar directamente
-                                            registrarGastoDirecto(descripcionFinal, valor, categoriaApi)
+                                            // Si coincide, crear gasto aceptando la sugerencia
+                                            crearGastoConDecisionML(
+                                                descripcionFinal, 
+                                                valor, 
+                                                categoriaApi, 
+                                                verificarResponse.recomendacion.categoria_sugerida,
+                                                true
+                                            )
                                         } else {
                                             // Si no coincide, mostrar modal
                                             verificarCategoriaResponse = verificarResponse
@@ -238,9 +247,15 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                                         }
                                     },
                                     onFailure = { exception ->
-                                        // Si falla la verificación, registrar directamente
+                                        // Si falla la verificación, crear gasto con categoría original
                                         Log.w("HomeScreen", "Error al verificar categoría: ${exception.message}")
-                                        registrarGastoDirecto(descripcionFinal, valor, categoriaApi)
+                                        crearGastoConDecisionML(
+                                            descripcionFinal, 
+                                            valor, 
+                                            categoriaApi, 
+                                            categoriaApi, // usar la misma categoría como sugerida
+                                            false // no acepta sugerencia porque falló la verificación
+                                        )
                                     }
                                 )
                             } catch (e: Exception) {
@@ -337,19 +352,20 @@ fun GastoFormWithGrid(nombreCategoria: String) {
         GastosComidaGrid(
             gastos,
             onEditar = { gasto ->
+                // Cargar el gasto para editar
                 valor = gasto.valor
                 descripcion = gasto.descripcion
                 editandoId = gasto.id
             },
-            onEliminar = { gasto ->
+            onEliminar = { gastoItem ->
+                // Eliminar gasto
                 coroutineScope.launch {
                     isLoading = true
-                    showErrorMessage = null
-                    val result = GastoService.eliminarGasto(gasto.id)
+                    val result = GastoService.eliminarGasto(gastoItem.id)
                     result.fold(
-                        onSuccess = { _ ->
+                        onSuccess = { response ->
+                            gastos = gastos.filter { it.id != gastoItem.id }
                             showSuccessMessage = true
-                            gastos = gastos.filter { it.id != gasto.id }
                         },
                         onFailure = { exception ->
                             showErrorMessage = "Error al eliminar gasto: ${exception.message}"

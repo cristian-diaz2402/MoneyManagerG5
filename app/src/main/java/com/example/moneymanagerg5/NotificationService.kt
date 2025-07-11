@@ -19,12 +19,12 @@ data class BackendNotification(
 )
 
 enum class TipoNotificacion {
-    VERIFICACION_CATEGORIA,
-    CREACION_GASTO,
-    GASTO_NORMAL,
-    ERROR,
-    ELIMINAR_GASTO,
-    EDITAR_GASTO
+    VERIFICACION_CATEGORIA,  // Para /ml/verificar-categoria
+    CREACION_GASTO,         // Para /gastos/crear-con-decision
+    GASTO_NORMAL,           // Para /gastos (registro normal)
+    EDITAR_GASTO,           // Para PUT /gastos/{id}
+    ELIMINAR_GASTO,         // Para DELETE /gastos/{id}
+    ERROR                   // Para errores en las API calls
 }
 
 object NotificationService {

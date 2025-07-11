@@ -136,7 +136,7 @@ interface AuthApi {
         @Path("gasto_id") gastoId: Int,
         @Query("usuario_id") usuarioId: Int
     ): Response<EliminarGastoResponse>
-
+    
     @POST("/ml/verificar-categoria")
     suspend fun verificarCategoria(
         @Header("Authorization") authorization: String,

@@ -14,13 +14,14 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Notifications
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.moneymanagerg5.ui.DashboardScreen
-import com.example.moneymanagerg5.ui.NotificationsScreen
+import com.example.moneymanagerg5.ui.notifications.NotificationsScreen
 import com.example.moneymanagerg5.ui.ProfileScreen
 import com.example.moneymanagerg5.ui.home.HomeScreen
 import com.example.moneymanagerg5.ui.MoneyManagerG5Theme
@@ -39,7 +40,7 @@ import com.example.moneymanagerg5.GastoService
 sealed class Screen(val route: String, val label: String, val icon: Any) {
     object Home : Screen("home", "Inicio", Icons.Filled.Home)
     object Dashboard : Screen("dashboard", "Estadísticas", R.drawable.bar_chart_4_bars_24px)
-    object Notifications : Screen("notifications", "Ajustes", Icons.Filled.Settings)
+    object Notifications : Screen("notifications", "Notificaciones", Icons.Filled.Notifications)
 }
 
 class MainActivity : ComponentActivity() {

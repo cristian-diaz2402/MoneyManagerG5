@@ -41,7 +41,7 @@ object GastoService {
             .remove(KEY_USER_ID)
             .apply()
     }
-    
+
     suspend fun verificarCategoria(
         descripcion: String,
         categoriaUsuario: String
@@ -383,4 +383,4 @@ object GastoService {
             Result.failure(e)
         }
     }
-} 
+}

@@ -8,47 +8,44 @@ object NotificationDemoHelper {
     
     /**
      * Genera notificaciones de ejemplo para probar el sistema
+     * Solo incluye los endpoints que están activos en el backend
      */
     fun generarNotificacionesDeEjemplo() {
-        // Ejemplo de verificación ML que coincide
+        // Ejemplo 1: Verificación ML que coincide
         NotificationService.addNotification(
             tipo = TipoNotificacion.VERIFICACION_CATEGORIA,
             titulo = "Verificación ML - COMIDA",
             mensaje = "✅ La categoría seleccionada es apropiada",
             respuestaCompleta = """
                 {
-                  "exito": true,
-                  "categoria_original": "COMIDA",
                   "recomendacion": {
                     "categoria_sugerida": "COMIDA",
+                    "categoria_original": "COMIDA",
                     "coincide": true,
-                    "confianza": 0.95,
                     "mensaje": "✅ La categoría seleccionada es apropiada"
                   }
                 }
             """.trimIndent()
         )
         
-        // Ejemplo de verificación ML que NO coincide
+        // Ejemplo 2: Verificación ML que NO coincide
         NotificationService.addNotification(
             tipo = TipoNotificacion.VERIFICACION_CATEGORIA,
             titulo = "Verificación ML - VARIOS",
             mensaje = "💡 Sugerencia: Considera cambiar de 'varios' a 'comida'",
             respuestaCompleta = """
                 {
-                  "exito": true,
-                  "categoria_original": "VARIOS",
                   "recomendacion": {
                     "categoria_sugerida": "COMIDA",
+                    "categoria_original": "VARIOS",
                     "coincide": false,
-                    "confianza": 0.87,
                     "mensaje": "💡 Sugerencia: Considera cambiar de 'varios' a 'comida'"
                   }
                 }
             """.trimIndent()
         )
         
-        // Ejemplo de gasto creado con decisión
+        // Ejemplo 3: Gasto creado con decisión (Aceptó sugerencia)
         NotificationService.addNotification(
             tipo = TipoNotificacion.CREACION_GASTO,
             titulo = "Gasto Creado con ML #123",
@@ -59,42 +56,45 @@ object NotificationDemoHelper {
                   "descripcion": "Almuerzo McDonald's",
                   "monto": 25.50,
                   "categoria": "COMIDA",
-                  "usuario_id": 1,
                   "fecha": "2025-07-11T14:30:00",
-                  "created_at": "2025-07-11T14:30:00.123Z",
-                  "updated_at": null,
-                  "confianza_categoria": 0.95
+                  "usuario_id": 1
                 }
             """.trimIndent()
         )
         
-        // Ejemplo de gasto normal
+        // Ejemplo 4: Gasto creado con decisión (Rechazó sugerencia)
         NotificationService.addNotification(
-            tipo = TipoNotificacion.GASTO_NORMAL,
-            titulo = "Gasto Registrado #124",
-            mensaje = "Gasto registrado: Gasolina - $45.00",
+            tipo = TipoNotificacion.CREACION_GASTO,
+            titulo = "Gasto Creado con ML #124",
+            mensaje = "Rechazó sugerencia ML: VARIOS - $15.00",
             respuestaCompleta = """
                 {
-                  "descripcion": "Gasolina",
-                  "monto": 45.0,
-                  "categoria": "TRANSPORTE",
                   "id": 124,
-                  "usuario_id": 1,
+                  "descripcion": "Compra en tienda",
+                  "monto": 15.00,
+                  "categoria": "VARIOS",
                   "fecha": "2025-07-11T15:00:00",
-                  "dia_semana": 4,
-                  "hora_gasto": 15,
-                  "es_fin_semana": false,
-                  "patron_temporal": "TARDE",
-                  "frecuencia_descripcion": 1,
-                  "es_recurrente": false,
-                  "confianza_categoria": 0.98,
-                  "created_at": "2025-07-11T15:00:00.456Z",
-                  "updated_at": "2025-07-11T15:00:00.456Z"
+                  "usuario_id": 1
                 }
             """.trimIndent()
         )
         
-        // Ejemplo de error
+        // Ejemplo 5: Error en verificación ML
+        NotificationService.addNotification(
+            tipo = TipoNotificacion.ERROR,
+            titulo = "Error en Verificación ML",
+            mensaje = "Error 401: Token de autenticación inválido",
+            respuestaCompleta = """
+                {
+                  "error": "UNAUTHORIZED",
+                  "message": "Token de autenticación inválido o expirado",
+                  "code": 401,
+                  "timestamp": "2025-07-11T15:30:00.789Z"
+                }
+            """.trimIndent()
+        )
+        
+        // Ejemplo 6: Error al crear gasto
         NotificationService.addNotification(
             tipo = TipoNotificacion.ERROR,
             titulo = "Error al Crear Gasto",
