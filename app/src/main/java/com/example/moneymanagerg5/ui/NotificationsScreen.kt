@@ -49,7 +49,7 @@ fun GastoFormWithGridAjustes(nombreCategoria: String, subtitulo: String, gastos:
                 .padding(vertical = 4.dp),
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
         )
-        Text(text = "Añade una descripcion (opcional)", fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 8.dp))
+        Text(text = "Añade una descripcion", fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 8.dp))
         OutlinedTextField(
             value = descripcion,
             onValueChange = { descripcion = it },

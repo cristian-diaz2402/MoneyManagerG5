@@ -114,11 +114,19 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                 onSuccess = { gastoResponse ->
                     showSuccessMessage = true
                     limpiarFormulario()
-                    gastos = gastos + GastoItem(
-                        id = gastoResponse.id,
-                        descripcion = gastoResponse.descripcion ?: "Sin descripción",
-                        valor = gastoResponse.monto.toString()
-                    )
+                    
+                    // Solo agregar a la lista local si:
+                    // 1. No se aceptó la sugerencia (se ignoró)
+                    // 2. O si la categoría sugerida es la misma que la original
+                    if (!aceptaSugerencia || categoriaSugerida.lowercase() == categoriaOriginal.lowercase()) {
+                        gastos = gastos + GastoItem(
+                            id = gastoResponse.id,
+                            descripcion = gastoResponse.descripcion ?: "Sin descripción",
+                            valor = gastoResponse.monto.toString()
+                        )
+                    }
+                    // Si se aceptó la sugerencia y es una categoría diferente, no agregar a la lista local
+                    // porque aparecerá en la categoría correcta cuando se recargue
                 },
                 onFailure = { exception ->
                     showErrorMessage = "Error al crear gasto: ${exception.message}"
@@ -156,11 +164,19 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                     onSuccess = { gastoResponse ->
                         showSuccessMessage = true
                         limpiarFormulario()
-                        gastos = gastos + GastoItem(
-                            id = gastoResponse.id,
-                            descripcion = gastoResponse.descripcion ?: "Sin descripción",
-                            valor = gastoResponse.monto.toString()
-                        )
+                        
+                        // Solo agregar a la lista local si:
+                        // 1. No se aceptó la sugerencia (se ignoró)
+                        // 2. O si la categoría sugerida es la misma que la original
+                        if (!aceptaSugerencia || verificarResponse.recomendacion.categoria_sugerida.lowercase() == verificarResponse.recomendacion.categoria_original.lowercase()) {
+                            gastos = gastos + GastoItem(
+                                id = gastoResponse.id,
+                                descripcion = gastoResponse.descripcion ?: "Sin descripción",
+                                valor = gastoResponse.monto.toString()
+                            )
+                        }
+                        // Si se aceptó la sugerencia y es una categoría diferente, no agregar a la lista local
+                        // porque aparecerá en la categoría correcta cuando se recargue
                         
                         // Limpiar estado del modal
                         showCategoriaModal = false
@@ -203,7 +219,7 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                 .padding(vertical = 4.dp),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
         )
-        Text(text = "Añade una descripcion (opcional)", fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 8.dp))
+        Text(text = "Añade una descripcion", fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 8.dp))
         OutlinedTextField(
             value = descripcion,
             onValueChange = { descripcion = it },

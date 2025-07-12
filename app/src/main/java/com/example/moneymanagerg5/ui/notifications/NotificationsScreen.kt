@@ -59,17 +59,17 @@ fun NotificationsScreen() {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Botón para generar notificaciones de ejemplo (solo para pruebas)
-                if (notifications.isEmpty()) {
-                    Button(
-                        onClick = { NotificationDemoHelper.generarNotificacionesDeEjemplo() },
-                        colors = ButtonDefaults.buttonColors(
-                            backgroundColor = MaterialTheme.colors.secondary
-                        )
-                    ) {
-                        Text("📝 Generar Ejemplos")
-                    }
-                }
+                // Botón para generar notificaciones de ejemplo (solo para pruebas) - OCULTO
+                // if (notifications.isEmpty()) {
+                //     Button(
+                //         onClick = { NotificationDemoHelper.generarNotificacionesDeEjemplo() },
+                //         colors = ButtonDefaults.buttonColors(
+                //             backgroundColor = MaterialTheme.colors.secondary
+                //         )
+                //     ) {
+                //         Text("📝 Generar Ejemplos")
+                //     }
+                // }
                 
                 if (notifications.isNotEmpty()) {
                     Button(
