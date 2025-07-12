@@ -20,7 +20,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.moneymanagerg5.ui.DashboardScreen
+import com.example.moneymanagerg5.ui.dashboard.DashboardScreen
 import com.example.moneymanagerg5.ui.notifications.NotificationsScreen
 import com.example.moneymanagerg5.ui.ProfileScreen
 import com.example.moneymanagerg5.ui.home.HomeScreen

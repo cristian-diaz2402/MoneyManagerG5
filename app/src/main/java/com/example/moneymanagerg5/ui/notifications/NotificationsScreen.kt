@@ -464,6 +464,7 @@ fun getIconForType(tipo: TipoNotificacion): ImageVector {
         TipoNotificacion.EDITAR_GASTO -> Icons.Default.Edit
         TipoNotificacion.ELIMINAR_GASTO -> Icons.Default.Delete
         TipoNotificacion.ERROR -> Icons.Default.Warning
+        TipoNotificacion.SUCCESS -> Icons.Default.CheckCircle
     }
 }
 
@@ -475,6 +476,7 @@ fun getColorForType(tipo: TipoNotificacion): Color {
         TipoNotificacion.EDITAR_GASTO -> Color(0xFF9C27B0) // Púrpura - Editar
         TipoNotificacion.ELIMINAR_GASTO -> Color(0xFF757575) // Gris - Eliminar
         TipoNotificacion.ERROR -> Color(0xFFF44336) // Rojo - Errores
+        TipoNotificacion.SUCCESS -> Color(0xFF4CAF50) // Verde - Éxito
     }
 }
 
@@ -486,5 +488,6 @@ fun getTipoDisplayName(tipo: TipoNotificacion): String {
         TipoNotificacion.EDITAR_GASTO -> "EDITAR"
         TipoNotificacion.ELIMINAR_GASTO -> "ELIMINAR"
         TipoNotificacion.ERROR -> "ERROR"
+        TipoNotificacion.SUCCESS -> "ÉXITO"
     }
 } 

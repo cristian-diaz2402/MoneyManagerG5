@@ -75,7 +75,7 @@ fun GastoFormWithGrid(nombreCategoria: String) {
             "varios" -> "varios"
             else -> "varios"
         }
-        val result = GastoService.obtenerGastosPorCategoria(categoriaApi)
+        val result = GastoService.obtenerGastosPorCategoriaAuth(categoriaApi)
         result.fold(
             onSuccess = { lista ->
                 gastos = lista.map {
@@ -134,20 +134,22 @@ fun GastoFormWithGrid(nombreCategoria: String) {
     // Función para manejar la decisión del modal
     val manejarDecisionModal: suspend (Boolean) -> Unit = { aceptaSugerencia ->
         val triple = gastoPendiente
-        if (triple == null) {
+        val verificarResponse = verificarCategoriaResponse
+        
+        if (triple == null || verificarResponse == null) {
             isLoading = false
             showCategoriaModal = false
             verificarCategoriaResponse = null
+            gastoPendiente = null
         } else {
-            val (descripcionPend, montoPend, categoriaOriginalPend) = triple
+            val (descripcionPend, montoPend, _) = triple
             try {
                 val montoDouble = montoPend.toDoubleOrNull() ?: 0.0
-                val categoriaSugerida = verificarCategoriaResponse?.recomendacion?.categoria_sugerida ?: categoriaOriginalPend
                 val result = GastoService.crearGastoConDecision(
                     descripcion = descripcionPend,
                     monto = montoDouble,
-                    categoriaOriginal = categoriaOriginalPend,
-                    categoriaSugerida = categoriaSugerida,
+                    categoriaOriginal = verificarResponse.recomendacion.categoria_original,
+                    categoriaSugerida = verificarResponse.recomendacion.categoria_sugerida,
                     aceptaSugerencia = aceptaSugerencia
                 )
                 result.fold(
@@ -159,18 +161,27 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                             descripcion = gastoResponse.descripcion ?: "Sin descripción",
                             valor = gastoResponse.monto.toString()
                         )
+                        
+                        // Limpiar estado del modal
+                        showCategoriaModal = false
+                        verificarCategoriaResponse = null
+                        gastoPendiente = null
                     },
                     onFailure = { exception ->
-                        showErrorMessage = "Error al registrar gasto: ${exception.message}"
+                        showErrorMessage = "Error al crear gasto: ${exception.message}"
+                        // Limpiar estado del modal en caso de error
+                        showCategoriaModal = false
+                        verificarCategoriaResponse = null
+                        gastoPendiente = null
                     }
                 )
             } catch (e: Exception) {
                 showErrorMessage = "Error inesperado: ${e.message}"
-            } finally {
-                isLoading = false
                 showCategoriaModal = false
                 verificarCategoriaResponse = null
                 gastoPendiente = null
+            } finally {
+                isLoading = false
             }
         }
     }
@@ -229,18 +240,20 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                                 
                                 verificarResult.fold(
                                     onSuccess = { verificarResponse ->
+                                        // Guardar la respuesta de verificación para usar en el modal
+                                        verificarCategoriaResponse = verificarResponse
+                                        
                                         if (verificarResponse.recomendacion.coincide) {
-                                            // Si coincide, crear gasto aceptando la sugerencia
+                                            // Si coincide, crear gasto directamente aceptando la sugerencia
                                             crearGastoConDecisionML(
                                                 descripcionFinal, 
                                                 valor, 
-                                                categoriaApi, 
+                                                verificarResponse.recomendacion.categoria_original,
                                                 verificarResponse.recomendacion.categoria_sugerida,
                                                 true
                                             )
                                         } else {
-                                            // Si no coincide, mostrar modal
-                                            verificarCategoriaResponse = verificarResponse
+                                            // Si NO coincide, mostrar modal para que el usuario decida
                                             gastoPendiente = Triple(descripcionFinal, valor, categoriaApi)
                                             showCategoriaModal = true
                                             isLoading = false
@@ -263,12 +276,13 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                                 isLoading = false
                             }
                         } else {
-                            // Editar gasto existente (sin verificación ML)
+                            // Editar gasto existente usando el nuevo endpoint
                             try {
-                                val result = GastoService.editarGasto(
+                                val montoDouble = valor.toDoubleOrNull() ?: 0.0
+                                val result = GastoService.editarGastoUsuario(
                                     gastoId = editandoId!!,
                                     descripcion = descripcion.ifBlank { "Sin descripción" },
-                                    monto = valor,
+                                    monto = montoDouble,
                                     categoria = categoriaApi
                                 )
                                 result.fold(
@@ -358,10 +372,10 @@ fun GastoFormWithGrid(nombreCategoria: String) {
                 editandoId = gasto.id
             },
             onEliminar = { gastoItem ->
-                // Eliminar gasto
+                // Eliminar gasto usando el nuevo endpoint
                 coroutineScope.launch {
                     isLoading = true
-                    val result = GastoService.eliminarGasto(gastoItem.id)
+                    val result = GastoService.eliminarGastoUsuario(gastoItem.id)
                     result.fold(
                         onSuccess = { response ->
                             gastos = gastos.filter { it.id != gastoItem.id }

@@ -24,7 +24,8 @@ enum class TipoNotificacion {
     GASTO_NORMAL,           // Para /gastos (registro normal)
     EDITAR_GASTO,           // Para PUT /gastos/{id}
     ELIMINAR_GASTO,         // Para DELETE /gastos/{id}
-    ERROR                   // Para errores en las API calls
+    ERROR,                   // Para errores en las API calls
+    SUCCESS
 }
 
 object NotificationService {

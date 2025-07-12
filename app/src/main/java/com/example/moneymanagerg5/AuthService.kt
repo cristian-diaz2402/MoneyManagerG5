@@ -13,6 +13,7 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 import retrofit2.http.PUT
 import retrofit2.http.DELETE
+import retrofit2.http.PATCH
 
 // Data classes para request y response
 
@@ -21,11 +22,41 @@ data class LoginRequest(
     val password: String
 )
 
+data class RegisterRequest(
+    val nombre: String,
+    val email: String,
+    val password: String,
+    val telefono: String? = null,
+    val presupuesto: Double? = null,
+    val periodo_presupuesto: String? = null
+)
+
+data class ActualizarPerfilRequest(
+    val nombre: String? = null,
+    val telefono: String? = null,
+    val presupuesto: Double? = null,
+    val periodo_presupuesto: String? = null
+)
+
+data class UserData(
+    val nombre: String?,
+    val email: String?,
+    val telefono: String?,
+    val presupuesto: Double?,
+    val periodo_presupuesto: String?,
+    val id: Int,
+    val is_active: Boolean,
+    val last_login: String?,
+    val created_at: String?,
+    val updated_at: String?
+)
+
 data class LoginResponse(
     val access_token: String?,
     val token_type: String?,
     val user_id: Int?,
     val expires_in: Int?,
+    val user: UserData?,
     val detail: String? = null
 )
 
@@ -105,9 +136,34 @@ data class GastoConDecisionResponse(
     val usuario_id: Int
 )
 
+// Data classes para los nuevos endpoints de editar y eliminar gastos
+data class GastoUpdate(
+    val descripcion: String? = null,
+    val monto: Double? = null,
+    val categoria: String? = null,
+    val fecha: String? = null
+)
+
+data class EditarGastoUsuarioRequest(
+    val gasto_id: Int,
+    val gasto_update: GastoUpdate
+)
+
+data class EliminarGastoUsuarioRequest(
+    val gasto_id: Int
+)
+
+data class EliminarGastoUsuarioResponse(
+    val message: String,
+    val id: Int
+)
+
 interface AuthApi {
     @POST("/auth/login-json")
     suspend fun login(@Body request: LoginRequest): Response<LoginResponse>
+    
+    @POST("/auth/register")
+    suspend fun register(@Body request: RegisterRequest): Response<UserData>
     
     @POST("/gastos")
     suspend fun registrarGasto(
@@ -149,6 +205,41 @@ interface AuthApi {
         @Header("Authorization") authorization: String,
         @Body request: CrearGastoConDecisionRequest
     ): Response<GastoConDecisionResponse>
+    
+    @GET("/auth/me/gastos")
+    suspend fun obtenerTodosLosGastos(
+        @Header("Authorization") authorization: String
+    ): Response<List<GastoResponse>>
+    
+    @GET("/auth/me/gastos")
+    suspend fun obtenerGastosPorCategoriaAuth(
+        @Header("Authorization") authorization: String,
+        @Query("categoria") categoria: String
+    ): Response<List<GastoResponse>>
+    
+    @PATCH("/auth/perfil")
+    suspend fun actualizarPerfil(
+        @Header("Authorization") authorization: String,
+        @Body request: ActualizarPerfilRequest
+    ): Response<UserData>
+    
+    @POST("/auth/update-profile")
+    suspend fun actualizarPerfilPost(
+        @Header("Authorization") authorization: String,
+        @Body request: ActualizarPerfilRequest
+    ): Response<UserData>
+    
+    @POST("/auth/gastos/update")
+    suspend fun editarGastoUsuario(
+        @Header("Authorization") authorization: String,
+        @Body request: EditarGastoUsuarioRequest
+    ): Response<GastoResponse>
+    
+    @POST("/auth/gastos/delete")
+    suspend fun eliminarGastoUsuario(
+        @Header("Authorization") authorization: String,
+        @Body request: EliminarGastoUsuarioRequest
+    ): Response<EliminarGastoUsuarioResponse>
 }
 
 object AuthService {
@@ -168,4 +259,4 @@ object AuthService {
         .build()
 
     val api: AuthApi = retrofit.create(AuthApi::class.java)
-} 
+}

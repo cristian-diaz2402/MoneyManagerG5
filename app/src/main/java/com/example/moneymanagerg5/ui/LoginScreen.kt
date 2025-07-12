@@ -134,8 +134,12 @@ fun LoginScreen(
                                 Log.d("LoginScreen", "Cuerpo de respuesta: $body")
                                 if (body?.access_token != null) {
                                     Log.d("LoginScreen", "Login exitoso, token: ${body.access_token}")
-                                    // Guardar datos de autenticación
-                                    GastoService.saveAuthData(body.access_token, body.user_id ?: 1)
+                                    // Guardar datos de autenticación y usuario
+                                    GastoService.saveAuthData(
+                                        body.access_token, 
+                                        body.user_id ?: 1, 
+                                        body.user
+                                    )
                                     loginExitoso = true
                                 } else {
                                     Log.w("LoginScreen", "Login fallido, detalle: ${body?.detail}")
